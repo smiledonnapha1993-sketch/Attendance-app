@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Attendance App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Attendance Tracker</h1>
+        
+        <div class="input-group">
+            <input type="text" id="userName" placeholder="Enter Full Name" required>
+            <button id="submitBtn">Mark Attendance</button>
+        </div>
+
+        <div class="list-container">
+            <h2>Today's Attendance</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceList">
+                    <!-- Data will be injected here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Modular) -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
+// Import the functions you need from the SDKs
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+// YOUR FIREBASE CONFIGURATION (Paste yours here)
+const firebaseConfig = {
+    apiKey: "Dolnapha",
+    authDomain: "attendance-app-2026.firebaseapp.com",
+    databaseURL: "https://attendance-app-2026-default-rtbd.firebaseio.com",
+    projectId: "attendance-app-2026",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Select elements
+const nameInput = document.getElementById('userName');
+const submitBtn = document.getElementById('submitBtn');
+const attendanceTable = document.getElementById('attendanceList');
+
+// Function to save attendance
+submitBtn.onclick = function() {
+    const name = nameInput.value.trim();
+    
+    if (name !== "") {
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Push to Firebase (creates a unique ID)
+        const attendanceRef = ref(db, 'attendance');
+        const newEntryRef = push(attendanceRef);
+        
+        set(newEntryRef, {
+            name: name,
+            time: timestamp
+        }).then(() => {
+            nameInput.value = ""; // Clear input
+        });
+    } else {
+        alert("Please enter a name");
+    }
+};
+
+// Listen for data in real-time
+onValue(ref(db, 'attendance'), (snapshot) => {
+    const data = snapshot.val();
+    attendanceTable.innerHTML = ""; // Clear existing UI
+    
+    if (data) {
+        // Loop through data and add rows
+        Object.values(data).forEach(entry => {
+            const row = `
+                <tr>
+                    <td>${entry.name}</td>
+                    <td>${entry.time}</td>
+                </tr>
+            `;
+            attendanceTable.innerHTML += row;
+        });
+    } else {
+        attendanceTable.innerHTML = "<tr><td colspan='2' style='text-align:center'>No records found.</td></tr>";
+    }
+});
